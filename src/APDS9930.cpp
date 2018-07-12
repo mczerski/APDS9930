@@ -21,6 +21,97 @@
  
  #include "APDS9930.h"
  
+/* Debug */
+#define DEBUG                   0
+
+/* APDS-9930 I2C address */
+#define APDS9930_I2C_ADDR       0x39
+
+/* Command register modes */
+#define REPEATED_BYTE           0x80
+#define AUTO_INCREMENT          0xA0
+#define SPECIAL_FN              0xE0
+
+/* Error code for returned values */
+#define ERROR                   0xFF
+
+/* Acceptable device IDs */
+#define APDS9930_ID_1           0x12
+#define APDS9930_ID_2           0x39
+
+/* Misc parameters */
+#define FIFO_PAUSE_TIME         30      // Wait period (ms) between FIFO reads
+
+/* APDS-9930 register addresses */
+#define APDS9930_ENABLE         0x00
+#define APDS9930_ATIME          0x01
+#define APDS9930_PTIME          0x02
+#define APDS9930_WTIME          0x03
+#define APDS9930_AILTL          0x04
+#define APDS9930_AILTH          0x05
+#define APDS9930_AIHTL          0x06
+#define APDS9930_AIHTH          0x07
+#define APDS9930_PILTL          0x08
+#define APDS9930_PILTH          0x09
+#define APDS9930_PIHTL          0x0A
+#define APDS9930_PIHTH          0x0B
+#define APDS9930_PERS           0x0C
+#define APDS9930_CONFIG         0x0D
+#define APDS9930_PPULSE         0x0E
+#define APDS9930_CONTROL        0x0F
+#define APDS9930_ID             0x12
+#define APDS9930_STATUS         0x13
+#define APDS9930_Ch0DATAL       0x14
+#define APDS9930_Ch0DATAH       0x15
+#define APDS9930_Ch1DATAL       0x16
+#define APDS9930_Ch1DATAH       0x17
+#define APDS9930_PDATAL         0x18
+#define APDS9930_PDATAH         0x19
+#define APDS9930_POFFSET        0x1E
+
+
+/* Bit fields */
+#define APDS9930_PON            0b00000001
+#define APDS9930_AEN            0b00000010
+#define APDS9930_PEN            0b00000100
+#define APDS9930_WEN            0b00001000
+#define APSD9930_AIEN           0b00010000
+#define APDS9930_PIEN           0b00100000
+#define APDS9930_SAI            0b01000000
+
+/* On/Off definitions */
+#define OFF                     0
+#define ON                      1
+
+/* Interrupt clear values */
+#define CLEAR_PROX_INT          0xE5
+#define CLEAR_ALS_INT           0xE6
+#define CLEAR_ALL_INTS          0xE7
+
+/* Default values */
+#define DEFAULT_ATIME           0xED
+#define DEFAULT_WTIME           0xFF
+#define DEFAULT_PTIME           0xFF
+#define DEFAULT_PPULSE          0x08
+#define DEFAULT_POFFSET         0       // 0 offset
+#define DEFAULT_CONFIG          0
+#define DEFAULT_PDRIVE          LED_DRIVE_100MA
+#define DEFAULT_PDIODE          2
+#define DEFAULT_PGAIN           PGAIN_8X
+#define DEFAULT_AGAIN           AGAIN_1X
+#define DEFAULT_PILT            0       // Low proximity threshold
+#define DEFAULT_PIHT            50      // High proximity threshold
+#define DEFAULT_AILT            0xFFFF  // Force interrupt for calibration
+#define DEFAULT_AIHT            0
+#define DEFAULT_PERS            0x22    // 2 consecutive prox or ALS for int.
+
+/* ALS coefficients */
+#define DF                      52
+#define GA                      0.49
+#define B                       1.862
+#define C                       0.746
+#define D                       1.291
+
 /**
  * @brief Constructor - Instantiates APDS9930 object
  */
@@ -932,6 +1023,26 @@ bool APDS9930::setAmbientLightIntEnable(uint8_t enable)
 }
 
 /**
+ * @brief Gets if ambient light interrupt is asserted or not
+ *
+ * @return 1 if interrupt is asserted, 0 if not. 0xFF on error.
+ */
+uint8_t APDS9930::getAmbientLightInt()
+{
+    uint8_t val;
+    
+    /* Read value from STATUS register */
+    if( !wireReadDataByte(APDS9930_STATUS, val) ) {
+        return ERROR;
+    }
+    
+    /* Shift and mask out AINT bit */
+    val = (val >> 4) & 0b00000001;
+    
+    return val;
+}
+
+/**
  * @brief Gets if proximity interrupts are enabled or not
  *
  * @return 1 if interrupts are enabled, 0 if not. 0xFF on error.
@@ -978,6 +1089,26 @@ bool APDS9930::setProximityIntEnable(uint8_t enable)
     }
     
     return true;
+}
+
+/**
+ * @brief Gets if proximity interrupt is asserted or not
+ *
+ * @return 1 if interrupt is asserted, 0 if not. 0xFF on error.
+ */
+uint8_t APDS9930::getProximityInt()
+{
+    uint8_t val;
+    
+    /* Read value from STATUS register */
+    if( !wireReadDataByte(APDS9930_STATUS, val) ) {
+        return ERROR;
+    }
+    
+    /* Shift and mask out PINT bit */
+    val = (val >> 5) & 0b00000001;
+    
+    return val;
 }
 
 /**
