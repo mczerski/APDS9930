@@ -244,7 +244,7 @@ bool APDS9930::setMode(uint8_t mode, uint8_t enable)
     
     /* Change bit(s) in ENABLE register */
     enable = enable & 0x01;
-    if( mode >= 0 && mode <= 6 ) {
+    if( mode <= 6 ) {
         if (enable) {
             reg_val |= (1 << mode);
         } else {
@@ -458,7 +458,6 @@ unsigned long APDS9930::ulongAmbientToLux(uint16_t Ch0, uint16_t Ch1)
 	uint8_t x[4]={1,8,16,120};
     unsigned long ALSIT = 2.73 * (256 - DEFAULT_ATIME);
     unsigned long iac  = max(Ch0 - B * Ch1, C * Ch0 - D * Ch1);
-	if (iac < 0) iac = 0;
     unsigned long lpc  = GA * DF / (ALSIT * x[getAmbientLightGain()]);
     return iac * lpc;
 }
